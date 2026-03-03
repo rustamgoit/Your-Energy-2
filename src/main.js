@@ -279,7 +279,7 @@ async function initQuote(leftRoot) {
       <div class="left-photo" aria-hidden="true">
         <img
           class="left-photo-img"
-          src="./img/webp/image.webp"
+          src="${IMAGE_WEBP}"
           alt=""
           aria-hidden="true"
           loading="lazy"
@@ -1006,6 +1006,8 @@ function renderFavorites() {
   renderPagination();
 }
 
+const IMAGE_WEBP = new URL("./img/webp/image.webp", import.meta.url).href;
+
 function renderFavoritesInfo() {
   const root = qs("#favoritesInfo");
   if (!root) return;
@@ -1029,7 +1031,7 @@ function renderFavoritesInfo() {
       <div class="left-photo-fav" aria-hidden="true">
         <img
           class="left-photo-fav-img"
-          src="./img/webp/image.webp"
+          src="${IMAGE_WEBP}"
           alt=""
           aria-hidden="true"
           loading="lazy"

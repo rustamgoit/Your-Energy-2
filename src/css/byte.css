@@ -1214,12 +1214,6 @@
 
 @media (max-width: 768px) {
     .hero-title {    font-size: 44px;    line-height: 44px;  }
-    .hero-img {
-  width: 38px;
-  height: 38px;
-
-  top: 100px;
-}
 }
 
 @media (max-width: 680px) {
