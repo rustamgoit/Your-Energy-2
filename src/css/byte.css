@@ -199,7 +199,7 @@
 /* мобилка */
 @media (max-width: 600px){
   .left-stack{
-    max-width: 600x;
+    max-width: 600px;
     display:flex;
     flex-direction:column;
     gap:20px;
@@ -651,7 +651,7 @@
   gap:12px;
   flex: 1;
   min-width:0;
-  max-width: auto;
+  max-width: 100%;
 }
 .ex-title-row .ex-title{
   flex:1;
@@ -1301,7 +1301,7 @@
   color: var(--text);
   height: 141px;
   padding: 25px;
-  min-width: none;
+  min-width: 0;
   box-sizing: border-box;
   width: 100%;
   border-radius: var(--r20);
