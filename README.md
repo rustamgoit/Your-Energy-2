@@ -35,16 +35,27 @@ Your Energy is a responsive fitness web application that allows users to browse 
 ## 📂 Project Structure
 
 
-src/
-├── css/
-├── fonts/
-├── img/
-├── partials/
-├── public/
-├── index.html
-├── page-2.html
-├── page-3.html
-└── main.js
+- src/
+- ├── css/
+- │       animations.css
+- │       base.css
+- │       byte.css
+- │       container.css
+- │       fonts.css
+- │       footer.css
+- │       header.css
+- │       modern-normalize.css
+- │       reset.css
+- │       styles.css
+- ├── fonts/
+- ├── img/
+- │   └───webp
+- ├── partials/
+- ├── public/
+- ├── index.html
+- ├── page-2.html
+- ├── page-3.html
+- └── main.js
 
 
 ---
