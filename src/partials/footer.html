@@ -1,15 +1,65 @@
+
 <footer class="footer">
-  <div class="container">
-    <p class="footer-desc">
-      Made with ✨ by
-      <a
-        class="footer-link"
-        href="https://goit.global/ua/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        GoIT team
+  <div class="container footer-top">
+
+    <div class="footer-left">
+      <a href="./index.html" class="logo logo--light">
+        <img src="./img/logo_f.svg" alt="Your Energy" class="logo-img">
       </a>
+
+      <ul class="social social--footer">
+        <li>
+          <a href="https://www.facebook.com/goITclub/" aria-label="Facebook">
+            <img src="./img/facebook_f.svg" alt="Facebook">
+          </a>
+        </li>
+        <li>
+          <a href="https://www.instagram.com/goitclub/" aria-label="Instagram">
+            <img src="./img/instagram_f.svg" alt="Instagram">
+          </a>
+        </li>
+        <li>
+          <a href="https://www.youtube.com/c/GoIT" aria-label="YouTube">
+            <img src="./img/youtube_f.svg" alt="YouTube">
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <h2 class="footer-big-title">
+      Transforming your <span class="italic">body</span> shape with us
+    </h2>
+
+    <div class="footer-subscribe">
+      <p class="subscribe-title">
+        Subscribe and learn about new exercises!
+      </p>
+
+      <form class="subscribe-form" id="subscribeForm">
+        <input
+          type="email"
+          name="email"
+          class="subscribe-input"
+          placeholder="Email"
+          required
+        />
+        <button class="subscribe-btn" type="submit">Send</button>
+        <p id="subscribeMsg" class="muted" aria-live="polite"></p>
+      </form>
+    </div>
+
+  </div>
+
+  <div class="container footer-bottom">
+    <p class="footer-copy">
+      Your Energy. All rights reserved.
     </p>
+
+    <div class="footer-links">
+      <span>©2023</span>
+      <a href="#">Privacy Policy</a>
+      <span>/</span>
+      <a href="#">Terms of Service</a>
+    </div>
   </div>
 </footer>

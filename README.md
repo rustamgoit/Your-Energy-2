@@ -1,50 +1,82 @@
-name: Build and deploy to GitHub Pages
+# 💪 Your Energy
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+Your Energy is a responsive fitness web application that allows users to browse exercises, filter them by category, search exercises, and save favorites.
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+## 🚀 Live Demo
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+🔗 https://rustamgoit.github.io/Your-Energy/
 
-      - name: Use Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
+---
 
-      - name: Install dependencies
-        run: npm ci
+## 📌 Features
 
-      - name: Build
-        run: npm run build
+- Responsive layout (mobile / tablet / desktop)
+- Exercises filtering by category
+- Search functionality
+- Pagination
+- Favorites page with localStorage
+- Modal window with exercise details
+- Fully optimized assets
+- Deployed on GitHub Pages
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
+---
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
+## 🛠 Technologies Used
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+- HTML5
+- CSS3 (Modular structure)
+- JavaScript (ES6 Modules)
+- Vite
+- modern-normalize
+- GitHub Pages
+
+---
+
+## 📂 Project Structure
+
+
+src/
+├── css/
+├── fonts/
+├── img/
+├── partials/
+├── public/
+├── index.html
+├── page-2.html
+├── page-3.html
+└── main.js
+
+
+---
+
+## ⚙️ Development
+
+Install dependencies:
+
+
+npm install
+
+
+Run development server:
+
+
+npm run dev
+
+
+Build for production:
+
+
+npm run build
+
+
+---
+
+## 📦 Deployment
+
+The project is automatically deployed to GitHub Pages via GitHub Actions after pushing to the `main` branch.
+
+----
+
+## 👨‍💻 Author
+
+Rustam Maistroenko

@@ -2,27 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="icon" type="image/svg+xml" href="./public/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Page 2</title>
+    <title>Favorites</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
-  <body>
-    <load
-      src="./partials/header.html"
-      icon-path="./img/sprite.svg#logo"
-      highlight-act="active"
-    />
 
-    <main>
-      <div class="container">
-        <h1 class="main-title">
-          <span class="main-title-gradient">Welcome</span> to page 2
-        </h1>
-        <load src="./partials/back-link.html" />
+  <body>
+    <load src="./partials/header.html" icon-path="img/sprite.svg#logo" />
+
+    <main class="container">
+      <h1 class="page-title">Favorites</h1>
+
+      <div class="fav-layout">
+        <div id="favoritesList"></div>
+        <div id="favoritesInfo"></div>
       </div>
     </main>
 
-    <load src="./partials/footer.html" />
+    <script type="module" src="./main.js"></script>
   </body>
 </html>

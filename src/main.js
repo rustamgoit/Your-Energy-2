@@ -1,0 +1,1244 @@
+// ==========================
+// CONFIG
+// ==========================
+const API_BASE = "https://your-energy.b.goit.study/api";
+
+const LS = {
+  quote: "ye_quote_v1",
+  favorites: "ye_favorites_v1",
+};
+
+const EMAIL_RE = /^\w+(\.\w+)?@[a-zA-Z_]+?\.[a-zA-Z]{2,3}$/;
+
+// ==========================
+// ASSETS (Vite + GitHub Pages safe)
+// ==========================
+const ASSETS = {
+  runner: new URL("./img/runner.svg", import.meta.url).href,
+  runner2: new URL("./img/runner_2.svg", import.meta.url).href,
+  quote: new URL("./img/quote.svg", import.meta.url).href,
+  logoL: new URL("./img/logo_l.svg", import.meta.url).href,
+
+  star: new URL("./img/star.svg", import.meta.url).href,
+  starG: new URL("./img/star_g.svg", import.meta.url).href,
+
+  arrow: new URL("./img/arrow.svg", import.meta.url).href,
+  delete: new URL("./img/delete.svg", import.meta.url).href,
+  food: new URL("./img/food.svg", import.meta.url).href,
+};
+
+// ==========================
+// STATE (в одном месте)
+// ==========================
+const state = {
+  activeFilter: "Muscles", // Muscles | Body parts | Equipment
+  activeCategory: null,
+  keyword: "",
+  page: 1,
+
+  limitCategories: 12,
+  limitExercises: 10,
+
+  totalPages: 1,
+};
+
+// ==========================
+// DOM REFS (в одном месте)
+// ==========================
+const refs = {
+  searchForm: document.getElementById("searchForm"),
+  searchInput: document.getElementById("searchInput"),
+  searchClear: document.getElementById("searchClear"),
+  exSub: document.getElementById("exSub"),
+  breadcrumbs: document.querySelectorAll(".breadcrumbs"),
+
+  content: document.getElementById("content"),
+  pagination: document.getElementById("pagination"),
+
+  backdrop: document.getElementById("backdrop"),
+  modalBody: document.getElementById("modalBody"),
+  modalClose: document.getElementById("modalClose"),
+};
+
+// ==========================
+// HELPERS
+// ==========================
+function qs(sel, root = document) {
+  return root.querySelector(sel);
+}
+function qsa(sel, root = document) {
+  return [...root.querySelectorAll(sel)];
+}
+
+function escapeHtml(s = "") {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function toTitleCase(s = "") {
+  return String(s)
+    .replace(/[-_]+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+// аккуратно: только первая буква строки
+function capFirst(s) {
+  const str = String(s || "").trim();
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// аккуратно: каждое слово с большой буквы (для bodyPart/target)
+function capWords(s) {
+  return String(s || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function todayKey() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function isFavoritesPage() {
+  return (
+    location.pathname.endsWith("/page-2.html") ||
+    location.pathname.endsWith("page-2.html")
+  );
+}
+
+function ensureFavoritesPagination() {
+  // Если пагинация уже есть в DOM — просто используем
+  let pag = document.getElementById("pagination");
+  if (pag) {
+    refs.pagination = pag;
+    return pag;
+  }
+
+  const favRoot = document.getElementById("favoritesList");
+  if (!favRoot) return null;
+
+  // Создаём mount как на Home (через JS)
+  pag = document.createElement("nav");
+  pag.id = "pagination";
+  pag.className = "pagination";
+
+  // Вставляем сразу после списка избранного
+  favRoot.insertAdjacentElement("afterend", pag);
+
+  refs.pagination = pag;
+  return pag;
+}
+
+// ==========================
+// API
+// ==========================
+async function apiGet(path, params = {}) {
+  const url = new URL(API_BASE + path);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, v);
+  });
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`GET ${url} -> ${res.status}`);
+  return res.json();
+}
+
+async function apiPost(path, body) {
+  const res = await fetch(API_BASE + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || `POST ${path} -> ${res.status}`);
+  return data;
+}
+
+async function apiPatch(path, body) {
+  const res = await fetch(API_BASE + path, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || `PATCH ${path} -> ${res.status}`);
+  return data;
+}
+
+// ==========================
+// UI STATE: breadcrumbs + search visibility
+// ==========================
+function showWorkoutsUI(categoryName) {
+  // показать поиск
+  refs.searchForm?.classList.remove("is-hidden");
+
+  // показать крошки и поставить текст
+  refs.breadcrumbs?.forEach((el) => el.classList.remove("is-hidden"));
+  if (refs.exSub) refs.exSub.textContent = categoryName || "";
+}
+
+function showCategoriesUI() {
+  // скрыть поиск
+  refs.searchForm?.classList.add("is-hidden");
+
+  // скрыть крошки
+  refs.breadcrumbs?.forEach((el) => el.classList.add("is-hidden"));
+  if (refs.exSub) refs.exSub.textContent = "";
+}
+
+// ==========================
+// HEADER (BURGER)
+// ==========================
+function initBurgerMenu() {
+  const burger = document.querySelector(".burger");
+  const menu = document.querySelector("#mobileMenu");
+  const closeBtn = document.querySelector(".menu-close");
+  const backdrop = document.querySelector("#menuBackdrop");
+
+  if (!burger || !menu || !closeBtn || !backdrop) return;
+
+  function openMenu() {
+    menu.classList.add("is-open");
+    menu.setAttribute("aria-hidden", "false");
+    burger.setAttribute("aria-expanded", "true");
+    backdrop.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeMenu() {
+    menu.classList.remove("is-open");
+    menu.setAttribute("aria-hidden", "true");
+    burger.setAttribute("aria-expanded", "false");
+    backdrop.hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  burger.addEventListener("click", openMenu);
+  closeBtn.addEventListener("click", closeMenu);
+  backdrop.addEventListener("click", closeMenu);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
+}
+
+function highlightActiveNav() {
+  const home = document.querySelector('.nav-pill a[href="./index.html"]');
+  const fav = document.querySelector('.nav-pill a[href="./page-2.html"]');
+
+  if (!home || !fav) return;
+
+  const path = window.location.pathname;
+
+  home.classList.remove("is-active");
+  fav.classList.remove("is-active");
+
+  if (path.includes("page-2")) {
+    fav.classList.add("is-active");
+  } else {
+    home.classList.add("is-active");
+  }
+}
+
+// ==========================
+// QUOTE OF THE DAY (cache 1/day)
+// ==========================
+async function initQuote(leftRoot) {
+  leftRoot.innerHTML = `
+    <div class="left-stack">
+      <section class="card card--dark" id="quoteCard">
+        <div class="card-head">
+          <div class="card-head__left">
+            <img class="card-ico" src="${ASSETS.runner}" alt="" aria-hidden="true" />
+            <h2 class="card-title">Quote of the day</h2>
+          </div>
+
+          <img class="card-ico card-ico--right" src="${ASSETS.quote}" alt="" aria-hidden="true" />
+        </div>
+
+        <p class="quote-text" id="quoteText">Loading...</p>
+        <p class="author" id="quoteAuthor"></p>
+      </section>
+
+      <div class="left-photo" aria-hidden="true"></div>
+
+      <section class="card card--light">
+        <div class="card-head card-head--light">
+          <div class="card-head__left">
+            <img class="card-ico" src="${ASSETS.logoL}" alt="" aria-hidden="true" />
+            <div class="card-head__texts">
+              <h3 class="minutes-title">110 min</h3>
+              <p class="muted-dark">Daily norm of sports.</p>
+            </div>
+          </div>
+        </div>
+
+        <p class="card-body-text">
+          The World Health Organization recommends at least 150 minutes of moderate-intensity aerobic physical activity throughout the week for adults aged 18-64. However, what happens if we adjust that number to 110 minutes every day? While it might seem like a high number to hit, dedicating 110 minutes daily to sporting activities may offer unparalleled benefits to physical health, mental well-being, and overall quality of life.
+        </p>
+      </section>
+    </div>
+  `;
+
+  const cachedRaw = localStorage.getItem(LS.quote);
+  if (cachedRaw) {
+    try {
+      const cached = JSON.parse(cachedRaw);
+      if (
+        cached?.date === todayKey() &&
+        cached?.quote?.quote &&
+        cached?.quote?.author
+      ) {
+        renderQuote(cached.quote);
+        return;
+      }
+    } catch (_) {}
+  }
+
+  const quote = await apiGet("/quote");
+  localStorage.setItem(LS.quote, JSON.stringify({ date: todayKey(), quote }));
+  renderQuote(quote);
+
+  function renderQuote(q) {
+    qs("#quoteText", leftRoot).textContent = q.quote;
+    qs("#quoteAuthor", leftRoot).textContent = q.author;
+  }
+}
+
+// ==========================
+// HOME SKELETON + TABS
+// ==========================
+function renderHomeSkeleton(rightRoot) {
+  rightRoot.innerHTML = `
+    <section id="content"></section>
+    <nav class="pagination" id="pagination"></nav>
+
+    <div class="backdrop is-hidden" id="backdrop">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Modal">
+        <button class="modal-close" id="modalClose" aria-label="Close modal">×</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+  `;
+
+  // обновим refs, потому что skeleton вставляет элементы заново
+  refs.content = document.getElementById("content");
+  refs.pagination = document.getElementById("pagination");
+  refs.backdrop = document.getElementById("backdrop");
+  refs.modalBody = document.getElementById("modalBody");
+  refs.modalClose = document.getElementById("modalClose");
+}
+
+function renderTabs() {
+  const mount = document.querySelector("#tabsMount");
+  if (!mount) return;
+
+  mount.innerHTML = `
+    <div class="tabs" id="tabs">
+      <button class="tab is-active" data-filter="Muscles" type="button">Muscles</button>
+      <button class="tab" data-filter="Body parts" type="button">Body parts</button>
+      <button class="tab" data-filter="Equipment" type="button">Equipment</button>
+    </div>
+  `;
+}
+
+// ==========================
+// LOADERS
+// ==========================
+async function loadCategories() {
+  showCategoriesUI();
+
+  const content = refs.content || qs("#content");
+  const pag = refs.pagination || qs("#pagination");
+
+  if (pag) pag.innerHTML = "";
+  if (content) content.innerHTML = `<p class="muted">Loading categories.</p>`;
+
+  const data = await apiGet("/filters", {
+    filter: state.activeFilter,
+    page: state.page,
+    limit: state.limitCategories,
+  }).catch(() => null);
+
+  const list = data?.results || data || [];
+  state.totalPages = data?.totalPages || 1;
+
+  if (!Array.isArray(list) || list.length === 0) {
+    if (content) content.innerHTML = `<p class="muted">No categories found.</p>`;
+    return;
+  }
+
+  if (content) {
+    content.innerHTML = `
+      <div class="grid" id="categoriesGrid">
+        ${list
+          .map((item) => {
+            const name = item.name || item;
+            const img = item.imgURL || item.img || "";
+            return `
+              <button class="tile" type="button" data-category="${escapeHtml(
+                String(name)
+              )}">
+                <span class="tile-bg" style="background-image:url('${escapeHtml(
+                  img
+                )}')"></span>
+                <span class="tile-title">${escapeHtml(
+                  toTitleCase(String(name))
+                )}</span>
+                <span class="tile-sub">${escapeHtml(state.activeFilter)}</span>
+              </button>
+            `;
+          })
+          .join("")}
+      </div>
+    `;
+  }
+
+  renderPagination();
+}
+
+async function loadExercises() {
+  showWorkoutsUI(toTitleCase(state.activeCategory || ""));
+
+  const content = refs.content || qs("#content");
+  if (content) content.innerHTML = `<p class="muted">Loading exercises.</p>`;
+
+  const params = {
+    page: state.page,
+    limit: state.limitExercises,
+    keyword: state.keyword || undefined,
+  };
+
+  if (state.activeCategory) {
+    if (state.activeFilter === "Muscles") params.muscles = state.activeCategory;
+    if (state.activeFilter === "Body parts")
+      params.bodypart = state.activeCategory;
+    if (state.activeFilter === "Equipment")
+      params.equipment = state.activeCategory;
+  }
+
+  const data = await apiGet("/exercises", params).catch(() => null);
+  const list = data?.results || data || [];
+  state.totalPages = data?.totalPages || 1;
+
+  if (!Array.isArray(list) || list.length === 0) {
+    if (content) content.innerHTML = `<p class="muted">No exercises found.</p>`;
+    return;
+  }
+
+  if (content) {
+    content.innerHTML = `
+      <div class="list" id="exerciseList">
+        ${list
+          .map((ex) => {
+            const rating = Number(ex.rating || 0);
+
+            return `
+            <article class="ex-card">
+              <div class="ex-top">
+                <div class="ex-top-left">
+                  <span class="badge">WORKOUT</span>
+                  <span class="rating">
+                    ${rating.toFixed(1)}
+                    <img class="rating-star" src="${ASSETS.star}" alt="star">
+                  </span>
+                </div>
+
+                <div class="ex-actions">
+                  <button class="start" type="button" data-start="${escapeHtml(
+                    ex._id
+                  )}">
+                    Start <img class="start-arrow" src="${ASSETS.arrow}" alt="arrow" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="ex-title-row">
+                <span class="ex-runner">
+                  <img src="${ASSETS.runner2}" alt="runner" />
+                </span>
+                <h3 class="ex-title">${escapeHtml(
+                  capFirst(String(ex.name || ""))
+                )}</h3>
+              </div>
+
+              <div class="ex-meta">
+                <div class="ex-meta-item">
+                  <span class="ex-meta-label">Burned calories:</span>
+                  <span class="ex-meta-value">
+                    <b>${escapeHtml(
+                      String(ex.burnedCalories ?? "-")
+                    )} / ${escapeHtml(String(ex.time ?? "-"))} min</b>
+                  </span>
+                </div>
+                <div class="ex-meta-item">
+                  <span class="ex-meta-label">Body part:</span>
+                  <span class="ex-meta-value">
+                    <b>${escapeHtml(capWords(String(ex.bodyPart ?? "-")))}</b>
+                  </span>
+                </div>
+                <div class="ex-meta-item">
+                  <span class="ex-meta-label">Target:</span>
+                  <span class="ex-meta-value">
+                    <b>${escapeHtml(capWords(String(ex.target ?? "-")))}</b>
+                  </span>
+                </div>
+              </div>
+            </article>
+          `;
+          })
+          .join("")}
+      </div>
+    `;
+  }
+
+  renderPagination();
+}
+
+// ==========================
+// PAGINATION (max 5 buttons + …)
+// ==========================
+function renderPagination() {
+  const pag = refs.pagination || qs("#pagination");
+  if (!pag) return;
+
+  const total = Number(state.totalPages || 1);
+  const current = Number(state.page || 1);
+
+  if (total <= 1) {
+    pag.innerHTML = "";
+    return;
+  }
+
+  const MAX = 5;
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+  let start = current - Math.floor(MAX / 2);
+  let end = current + Math.floor(MAX / 2);
+
+  if (start < 1) {
+    start = 1;
+    end = Math.min(total, start + MAX - 1);
+  }
+  if (end > total) {
+    end = total;
+    start = Math.max(1, end - MAX + 1);
+  }
+
+  const parts = [];
+
+  parts.push(
+    `<button class="pg-btn" type="button" data-page="${clamp(
+      current - 1,
+      1,
+      total
+    )}" ${current === 1 ? "disabled" : ""}>‹</button>`
+  );
+
+  if (start > 1) {
+    parts.push(`<button class="pg-btn" type="button" data-page="1">1</button>`);
+    if (start > 2) parts.push(`<span class="pg-dots">…</span>`);
+  }
+
+  for (let p = start; p <= end; p++) {
+    parts.push(
+      `<button class="pg-btn ${
+        p === current ? "is-active" : ""
+      }" type="button" data-page="${p}">${p}</button>`
+    );
+  }
+
+  if (end < total) {
+    if (end < total - 1) parts.push(`<span class="pg-dots">…</span>`);
+    parts.push(
+      `<button class="pg-btn" type="button" data-page="${total}">${total}</button>`
+    );
+  }
+
+  parts.push(
+    `<button class="pg-btn" type="button" data-page="${clamp(
+      current + 1,
+      1,
+      total
+    )}" ${current === total ? "disabled" : ""}>›</button>`
+  );
+
+  pag.innerHTML = parts.join("");
+}
+
+// ==========================
+// MODAL
+// ==========================
+function openModal(html, variant = "exercise") {
+  ensureModalMount();
+  const backdrop = refs.backdrop || qs("#backdrop");
+  const body = refs.modalBody || qs("#modalBody");
+  if (!backdrop || !body) return;
+
+  const modalEl = backdrop.querySelector(".modal");
+  if (modalEl) {
+    modalEl.classList.toggle("modal--exercise", variant === "exercise");
+    modalEl.classList.toggle("modal--rating", variant === "rating");
+  }
+
+  body.innerHTML = html;
+  backdrop.classList.remove("is-hidden");
+
+  const onEsc = (e) => {
+    if (e.key === "Escape") closeModal();
+  };
+  const onBackdrop = (e) => {
+    if (e.target === backdrop) closeModal();
+  };
+
+  (refs.modalClose || qs("#modalClose"))?.addEventListener("click", closeModal, {
+    once: true,
+  });
+  document.addEventListener("keydown", onEsc);
+  backdrop.addEventListener("click", onBackdrop);
+
+  function closeModal() {
+    backdrop.classList.add("is-hidden");
+    document.removeEventListener("keydown", onEsc);
+    backdrop.removeEventListener("click", onBackdrop);
+    body.innerHTML = "";
+
+    if (modalEl) {
+      modalEl.classList.remove("modal--exercise", "modal--rating");
+    }
+  }
+
+  window.__closeModal = closeModal;
+}
+
+async function openExerciseModal(exerciseId) {
+  openModal(`<p class="modal-loading">Loading.</p>`, "exercise");
+  const ex = await apiGet(`/exercises/${exerciseId}`);
+
+  const isFav = hasFavorite(ex._id);
+  const rating = Number(ex.rating || 0);
+  const ratingText = Number.isFinite(rating) ? rating.toFixed(1) : "0.0";
+
+  const stars = Array.from({ length: 5 }, (_, i) => {
+    const filled = i < Math.round(rating);
+    const src = filled ? ASSETS.star : ASSETS.starG;
+    return `<img class="star-ico" src="${src}" alt="star" />`;
+  }).join("");
+
+  const mediaUrl =
+    ex.gifUrl || ex.gifURL || ex.imageUrl || ex.imageUrl || ex.imgUrl || ex.imgURL || "";
+
+  const videoUrl = ex.videoUrl || ex.videoURL || ex.video || "";
+
+  const mediaHtml = videoUrl
+    ? `<video class="ex-media" src="${escapeHtml(String(videoUrl))}" controls playsinline></video>`
+    : `<img class="ex-media" src="${escapeHtml(
+        String(mediaUrl)
+      )}" alt="${escapeHtml(
+        String(ex.name || "exercise")
+      )}" loading="lazy" />`;
+
+  openModal(
+    `
+    <div class="exercise-modal">
+      <div class="exercise-media">
+        <div class="media-box">
+          ${mediaHtml}
+        </div>
+      </div>
+
+      <div class="exercise-info">
+        <h2 class="exercise-title">${escapeHtml(toTitleCase(ex.name))}</h2>
+
+        <div class="exercise-rating">
+          <span class="exercise-rating__value">${escapeHtml(ratingText)}</span>
+          <div class="stars" aria-label="Rating ${escapeHtml(ratingText)} out of 5">
+            ${stars}
+          </div>
+        </div>
+
+        <div class="modal-divider"></div>
+
+        <div class="exercise-kv">
+          <div class="kv-item">
+            <span class="kv-label">Target</span>
+            <span class="kv-value">${escapeHtml(toTitleCase(ex.target || "-"))}</span>
+          </div>
+          <div class="kv-item">
+            <span class="kv-label">Body Part</span>
+            <span class="kv-value">${escapeHtml(toTitleCase(ex.bodyPart || "-"))}</span>
+          </div>
+          <div class="kv-item">
+            <span class="kv-label">Equipment</span>
+            <span class="kv-value">${escapeHtml(toTitleCase(ex.equipment || "-"))}</span>
+          </div>
+          <div class="kv-item">
+            <span class="kv-label">Popular</span>
+            <span class="kv-value">${escapeHtml(String(ex.popularity ?? "-"))}</span>
+          </div>
+        </div>
+
+        <div class="exercise-calories">
+          <span class="exercise-calories__label">Burned calories</span>
+          <span class="exercise-calories__value">${escapeHtml(
+            String(ex.burnedCalories ?? "-")
+          )}/${escapeHtml(String(ex.time ?? "-"))} min</span>
+        </div>
+
+        <div class="modal-divider"></div>
+
+        <p class="exercise-desc">${escapeHtml(ex.description || "")}</p>
+
+        <div class="modal-actions">
+          <button class="modal-btn modal-btn--primary" type="button" id="favBtn">${
+            isFav ? "Remove from favorites" : "Add to favorites"
+          }</button>
+          <button class="modal-btn modal-btn--outline" type="button" id="rateBtn">Give a rating</button>
+        </div>
+      </div>
+    </div>
+  `,
+    "exercise"
+  );
+
+  qs("#favBtn")?.addEventListener("click", () => {
+    if (hasFavorite(ex._id)) removeFavorite(ex._id);
+    else addFavorite(ex);
+    window.__closeModal?.();
+    if (isFavoritesPage()) renderFavorites();
+  });
+
+  qs("#rateBtn")?.addEventListener("click", () => {
+    window.__closeModal?.();
+    openRatingModal(ex._id);
+  });
+}
+
+function ensureModalMount() {
+  let backdrop = document.getElementById("backdrop");
+  let body = document.getElementById("modalBody");
+  let close = document.getElementById("modalClose");
+
+  if (backdrop && body && close) {
+    refs.backdrop = backdrop;
+    refs.modalBody = body;
+    refs.modalClose = close;
+    return;
+  }
+
+  // создаём разметку модалки так же, как на Home
+  const html = `
+    <div class="backdrop is-hidden" id="backdrop">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="Modal">
+        <button class="modal-close" id="modalClose" aria-label="Close modal">×</button>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML("beforeend", html);
+
+  // обновим refs
+  refs.backdrop = document.getElementById("backdrop");
+  refs.modalBody = document.getElementById("modalBody");
+  refs.modalClose = document.getElementById("modalClose");
+}
+
+function openRatingModal(exerciseId) {
+  openModal(
+    `
+    <form class="rating-modal" id="ratingForm">
+      <div class="rating-head">
+        <span class="rating-head__label">Rating</span>
+        <div class="rating-head__stars">
+          <span class="rating-head__value" id="ratingValue">0.0</span>
+
+          <div class="rating-stars" role="radiogroup" aria-label="Choose rating">
+            ${[5, 4, 3, 2, 1]
+              .map(
+                (n) => `
+              <input class="rating-star-input" type="radio" id="rate${n}" name="rating" value="${n}" ${
+                  n === 1 ? "required" : ""
+                } />
+              <label class="rating-star-label" for="rate${n}" aria-label="${n} stars"></label>
+            `
+              )
+              .join("")}
+          </div>
+        </div>
+      </div>
+
+      <input class="rating-input" type="email" name="email" placeholder="Email" required />
+      <textarea class="rating-input rating-textarea" name="comment" placeholder="Your comment" rows="4"></textarea>
+
+      <button class="modal-btn modal-btn--primary modal-btn--full" type="submit">Send</button>
+      <p class="rating-msg" id="ratingMsg" aria-live="polite"></p>
+    </form>
+  `,
+    "rating"
+  );
+
+  const form = qs("#ratingForm");
+  const valueEl = qs("#ratingValue");
+  const msg = qs("#ratingMsg");
+
+  // live update value text
+  form?.addEventListener("change", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (target.name !== "rating") return;
+    if (valueEl) valueEl.textContent = `${Number(target.value).toFixed(1)}`;
+  });
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (msg) msg.textContent = "";
+
+    const fd = new FormData(e.currentTarget);
+    const rating = Number(fd.get("rating"));
+    const email = String(fd.get("email") || "").trim();
+    const comment = String(fd.get("comment") || "").trim();
+
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      if (msg) msg.textContent = "Please choose a rating.";
+      return;
+    }
+
+    if (!EMAIL_RE.test(email)) {
+      if (msg) msg.textContent = "Invalid email.";
+      return;
+    }
+
+    try {
+      await apiPatch(`/exercises/${exerciseId}/rating`, {
+        rate: rating,
+        email,
+        review: comment,
+      });
+      window.__closeModal?.();
+      await openExerciseModal(exerciseId);
+    } catch (err) {
+      if (msg) msg.textContent = err?.message || "Failed to send rating.";
+    }
+  });
+}
+
+// ==========================
+// FAVORITES (localStorage)
+// ==========================
+function getFavorites() {
+  const raw = localStorage.getItem(LS.favorites);
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function setFavorites(arr) {
+  localStorage.setItem(LS.favorites, JSON.stringify(arr));
+}
+
+function hasFavorite(id) {
+  return getFavorites().some((x) => x?._id === id);
+}
+
+function addFavorite(ex) {
+  const favs = getFavorites();
+  if (favs.some((x) => x._id === ex._id)) return;
+
+  favs.unshift({
+    _id: ex._id,
+    name: ex.name,
+    rating: ex.rating,
+    bodyPart: ex.bodyPart,
+    target: ex.target,
+    burnedCalories: ex.burnedCalories,
+    time: ex.time,
+  });
+
+  setFavorites(favs);
+}
+
+function removeFavorite(id) {
+  const favs = getFavorites().filter((x) => x._id !== id);
+  setFavorites(favs);
+}
+
+// ==========================
+// FAVORITES PAGE RENDER
+// ==========================
+function initFavoritesInteractions() {
+  const favRoot = qs("#favoritesList");
+  if (!favRoot) return;
+
+  // защита от повторного навешивания
+  if (favRoot.dataset.bound === "1") return;
+  favRoot.dataset.bound = "1";
+
+  favRoot.addEventListener("click", async (e) => {
+    const startBtn = e.target.closest("[data-start]");
+    if (startBtn) {
+      await openExerciseModal(startBtn.dataset.start);
+      return;
+    }
+
+    const removeBtn = e.target.closest("[data-remove]");
+    if (removeBtn) {
+      removeFavorite(removeBtn.dataset.remove);
+      renderFavorites(); // перерисовали список
+    }
+  });
+}
+
+function renderFavorites() {
+  const root = qs("#favoritesList");
+  if (!root) return;
+
+  const pag = ensureFavoritesPagination();
+
+  const favs = getFavorites();
+  const perPage = Number(state.limitExercises || 10);
+
+  state.totalPages = Math.max(1, Math.ceil(favs.length / perPage));
+  state.page = Math.max(1, Math.min(state.page, state.totalPages));
+
+  if (favs.length === 0) {
+    root.innerHTML = `<p class="muted">No favorites yet.</p>`;
+    if (pag) pag.innerHTML = "";
+    return;
+  }
+
+  const startIdx = (state.page - 1) * perPage;
+  const pageItems = favs.slice(startIdx, startIdx + perPage);
+
+  root.innerHTML = `
+    <div class="list" id="exerciseList">
+      ${pageItems
+        .map((ex) => {
+          return `
+            <article class="ex-card">
+              <div class="ex-top">
+                <div class="ex-top-left">
+                  <span class="badge">WORKOUT</span>
+                  <button class="danger" type="button" data-remove="${escapeHtml(
+                    ex._id
+                  )}">
+                    <img src="${ASSETS.delete}" alt="delete"/>
+                  </button>
+                </div>
+
+                <div class="ex-actions">
+                  <button class="start" type="button" data-start="${escapeHtml(
+                    ex._id
+                  )}">
+                    Start <img class="start-arrow" src="${ASSETS.arrow}" alt="arrow" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="ex-title-row">
+                <span class="ex-runner">
+                  <img src="${ASSETS.runner2}" alt="runner" />
+                </span>
+                <h3 class="ex-title">${escapeHtml(
+                  capFirst(String(ex.name || ""))
+                )}</h3>
+              </div>
+
+              <div class="ex-meta">
+                <div class="ex-meta-item">
+                  <span class="ex-meta-label">Burned calories:</span>
+                  <span class="ex-meta-value">
+                    <b>${escapeHtml(
+                      String(ex.burnedCalories ?? "-")
+                    )} / ${escapeHtml(String(ex.time ?? "-"))} min</b>
+                  </span>
+                </div>
+                <div class="ex-meta-item">
+                  <span class="ex-meta-label">Body part:</span>
+                  <span class="ex-meta-value">
+                    <b>${escapeHtml(capWords(String(ex.bodyPart ?? "-")))}</b>
+                  </span>
+                </div>
+                <div class="ex-meta-item">
+                  <span class="ex-meta-label">Target::</span>
+                  <span class="ex-meta-value">
+                    <b>${escapeHtml(capWords(String(ex.target ?? "-")))}</b>
+                  </span>
+                </div>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+
+  renderPagination();
+}
+
+function renderFavoritesInfo() {
+  const root = qs("#favoritesInfo");
+  if (!root) return;
+
+  root.innerHTML = `
+    <div class="left-stack-fav">
+      <section class="card card--dark" id="quoteCard">
+        <div class="card-head">
+          <div class="card-head__left">
+            <img class="card-ico" src="${ASSETS.runner}" alt="" aria-hidden="true" />
+            <h2 class="card-title">Quote of the day</h2>
+          </div>
+
+          <img class="card-ico card-ico--right" src="${ASSETS.quote}" alt="" aria-hidden="true" />
+        </div>
+
+        <p class="quote-text-fav" id="quoteText">Loading.</p>
+        <p class="author" id="quoteAuthor"></p>
+      </section>
+
+      <div class="left-photo-fav" aria-hidden="true"></div>
+
+      <section class="card card--light-fav">
+        <div class="card-head">
+          <div class="card-head-fav">
+            <img class="card-ico-fav" src="${ASSETS.food}" alt="" aria-hidden="true" />
+            <h3 class="minutes-title">110 min</h3>
+            <p class="muted-dark">Daily norm of sports.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  `;
+
+  function renderQuote(q) {
+    qs("#quoteText", root).textContent = q.quote;
+    qs("#quoteAuthor", root).textContent = q.author;
+  }
+
+  const cachedRaw = localStorage.getItem(LS.quote);
+  if (cachedRaw) {
+    try {
+      const cached = JSON.parse(cachedRaw);
+      if (
+        cached?.date === todayKey() &&
+        cached?.quote?.quote &&
+        cached?.quote?.author
+      ) {
+        renderQuote(cached.quote);
+        return;
+      }
+    } catch (_) {}
+  }
+
+  apiGet("/quote")
+    .then((quote) => {
+      localStorage.setItem(LS.quote, JSON.stringify({ date: todayKey(), quote }));
+      renderQuote(quote);
+    })
+    .catch(() => {
+      qs("#quoteText", root).textContent = "Failed to load quote.";
+      qs("#quoteAuthor", root).textContent = "";
+    });
+}
+
+// ==========================
+// SUBSCRIBE (footer)
+// ==========================
+function initSubscribe() {
+  const form = qs("#subscribeForm");
+  if (!form) return;
+
+  const msg = qs("#subscribeMsg");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (msg) msg.textContent = "";
+
+    const email = String(new FormData(form).get("email") || "").trim();
+    if (!EMAIL_RE.test(email)) {
+      if (msg) msg.textContent = "Invalid email.";
+      return;
+    }
+
+    try {
+      await apiPost("/subscription", { email });
+      if (msg) msg.textContent = "Successfully subscribed!";
+      form.reset();
+    } catch (err) {
+      if (msg) msg.textContent = err?.message || "Subscription failed.";
+    }
+  });
+}
+
+// ==========================
+// SEARCH UI (крестик)
+// ==========================
+function initSearchUI() {
+  const form = refs.searchForm;
+  const input = refs.searchInput;
+  const clear = refs.searchClear;
+  const field = form?.querySelector(".search-field");
+
+  if (!form || !input || !clear || !field) return;
+
+  const sync = () =>
+    field.classList.toggle("has-value", input.value.trim().length > 0);
+
+  input.addEventListener("input", sync);
+
+  clear.addEventListener("click", async () => {
+    input.value = "";
+    sync();
+    state.keyword = "";
+    state.page = 1;
+
+    if (state.activeCategory) await loadExercises();
+    else await loadCategories();
+
+    input.focus();
+  });
+
+  sync();
+}
+
+// ==========================
+// INIT HOME
+// ==========================
+async function initHome() {
+  const left = qs("#leftColumn");
+  const right = qs("#rightColumn");
+  if (!left || !right) return;
+
+  await initQuote(left);
+  renderHomeSkeleton(right);
+  renderTabs();
+  initSearchUI();
+
+  // tabs click
+  qs("#tabs")?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-filter]");
+    if (!btn) return;
+
+    state.activeFilter = btn.dataset.filter;
+    state.activeCategory = null;
+    state.keyword = "";
+    state.page = 1;
+
+    qsa(".tab", qs("#tabs")).forEach((b) =>
+      b.classList.toggle("is-active", b === btn)
+    );
+
+    if (refs.searchInput) refs.searchInput.value = "";
+    // categories view
+    await loadCategories();
+  });
+
+  // search submit
+  refs.searchForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    state.keyword = String(new FormData(e.currentTarget).get("q") || "").trim();
+    state.page = 1;
+
+    // если категория выбрана — фильтруем упражнения, иначе категории (на будущее)
+    if (state.activeCategory) await loadExercises();
+    else await loadCategories();
+  });
+
+  // content click: category tile / start
+  qs("#content")?.addEventListener("click", async (e) => {
+    const tile = e.target.closest("[data-category]");
+    const start = e.target.closest("[data-start]");
+
+    if (tile) {
+      state.activeCategory = tile.dataset.category;
+      state.keyword = "";
+      state.page = 1;
+
+      if (refs.searchInput) refs.searchInput.value = "";
+      await loadExercises();
+    }
+
+    if (start) await openExerciseModal(start.dataset.start);
+  });
+
+  // pagination click
+  qs("#pagination")?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-page]");
+    if (!btn) return;
+
+    const nextPage = Number(btn.dataset.page);
+    if (!Number.isFinite(nextPage) || nextPage === state.page) return;
+
+    state.page = nextPage;
+    if (state.activeCategory) await loadExercises();
+    else await loadCategories();
+  });
+
+  // initial load
+  await loadCategories();
+}
+
+// ==========================
+// APP INIT
+// ==========================
+function init() {
+  initBurgerMenu();
+  initSubscribe();
+  highlightActiveNav();
+
+  if (isFavoritesPage()) {
+    // ✅ Favorites: пагинация создаётся через JS (как на Home)
+    state.page = 1;
+    state.limitExercises = 10;
+
+    ensureFavoritesPagination();
+    renderFavorites();
+    renderFavoritesInfo();
+
+    // ✅ клики по "циферкам" для Favorites (как на Home)
+    qs("#pagination")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-page]");
+      if (!btn) return;
+
+      const nextPage = Number(btn.dataset.page);
+      if (!Number.isFinite(nextPage) || nextPage === state.page) return;
+
+      state.page = nextPage;
+      renderFavorites();
+    });
+    initFavoritesInteractions();
+
+    return;
+  }
+
+  initHome().catch((err) => {
+    console.error(err);
+    const right = qs("#rightColumn");
+    if (right)
+      right.innerHTML = `<p class="muted">App error: ${escapeHtml(
+        err?.message || "unknown"
+      )}</p>`;
+  });
+}
+
+init();
