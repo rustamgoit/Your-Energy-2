@@ -1,48 +1,35 @@
-import { defineConfig } from 'vite';
-import { glob } from 'glob';
-import injectHTML from 'vite-plugin-html-inject';
-import FullReload from 'vite-plugin-full-reload';
-import SortCss from 'postcss-sort-media-queries';
-
-export default defineConfig(({ command }) => {
-  return {
-    define: {
-      [command === 'serve' ? 'global' : '_global']: {},
-    },
-    root: 'src',
-    build: {
-      sourcemap: true,
-      rollupOptions: {
-        input: glob.sync('./src/*.html'),
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              return 'vendor';
-            }
-          },
-          entryFileNames: chunkInfo => {
-            if (chunkInfo.name === 'commonHelpers') {
-              return 'commonHelpers.js';
-            }
-            return '[name].js';
-          },
-          assetFileNames: assetInfo => {
-            if (assetInfo.name && assetInfo.name.endsWith('.html')) {
-              return '[name].[ext]';
-            }
-            return 'assets/[name]-[hash][extname]';
-          },
-        },
-      },
-      outDir: '../dist',
-      emptyOutDir: true,
-    },
-    plugins: [
-      injectHTML(),
-      FullReload(['./src/**/**.html']),
-      SortCss({
-        sort: 'mobile-first',
-      }),
-    ],
-  };
-});
+<section class="vite-promo">
+  <div class="container">
+    <div class="vite-promo-thumb">
+      <a
+        class="vite-promo-link"
+        href="https://vitejs.dev/"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Link to Vite official website"
+        title="Vite.js  build tool"
+      >
+        <!-- Path to images as from index.html file -->
+        <img
+          class="pic"
+          src="img/vite-logo.png"
+          alt="Vite logo"
+          width="640"
+          height="640"
+        />
+      </a>
+    </div>
+    <h1 class="main-title">
+      <span class="main-title-gradient">Vite</span>
+      Template by
+      <a
+        class="main-title-link"
+        href="https://github.com/goitacademy/vanilla-app-template"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        GoIT
+      </a>
+    </h1>
+  </div>
+</section>

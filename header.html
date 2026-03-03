@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="./public/favicon.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Energy Home</title>
+<link rel="stylesheet" href="./css/styles.css" />
+  </head>
+
+  <body>
+    <load src="./partials/header.html" icon-path="img/sprite.svg#logo" />
+
+    <main class="container">
+      <section class="hero">
+        <div class="hero-top">
+          <h1 class="hero-title">
+              Get <span class="italic">Body</span> in <br>shape, Stay healthy
+          </h1>
+        </div>
+        <div class="hero-mid">
+          <p class="hero-text">
+            Transform your physique and embrace a healthier lifestyle with our comprehensive fitness and nutrition support.
+          </p>
+          <div class="tags">
+              <span class="tag">#Sport</span>
+              <span class="tag">#Healthy</span>
+              <span class="tag">#Workout</span>
+              <span class="tag">#Diet</span>
+          </div>
+        </div>
+        <div class="hero-image"></div>
+        <div class="tags_m">
+          
+            <span class="tag">#Sport</span>
+            <span class="tag">#Healthy</span>
+            <span class="tag">#Workout</span>
+            <span class="tag">#Diet</span>
+        </div>
+      </section>
+
+      <div class="ex-head">
+        <h2 class="section-title">
+          <span class="ex-main">Exercises</span>
+          <span class="ex-divider breadcrumbs is-hidden"> / </span>
+          <span class="ex-sub breadcrumbs is-hidden" id="exSub">Waist</span>
+        </h2>
+
+        <div class="ex-controls">
+          <form class="search is-hidden" id="searchForm">
+            <div class="search-field" id="searchField">
+              <input
+                id="searchInput"
+                name="q"
+                type="text"
+                placeholder="Search"
+                autocomplete="off"
+              />
+              <button class="search-clear" type="button" id="searchClear" aria-label="Clear">
+                ×
+              </button>
+              <button class="search-btn" type="submit" aria-label="Search"><img src="./img/search.svg" alt="" aria-hidden="true" /></button>
+            </div>
+          </form>
+
+          <div id="tabsMount"></div>
+        </div>
+      </div>
+
+      <div class="layout">
+        <aside class="left" id="leftColumn"></aside>
+        <div class="right" id="rightColumn"></div>
+      </div>
+    </main>
+
+    <load src="./partials/footer.html" />
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
