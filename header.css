@@ -1,33 +1,19 @@
-/*
-  DM Sans via @font-face
-  ---------------------------------
-  ВАЖНО: добавь файлы шрифтов в src/fonts/
-  Рекомендуемые имена:
-    - dm-sans-regular.woff2
-    - dm-sans-medium.woff2
-    - dm-sans-bold.woff2
-*/
-
-@font-face {
-  font-family: 'DM Sans';
-  src: url('../fonts/dm-sans-v17-latin-regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
+.badges-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
 }
-
-@font-face {
-  font-family: 'DM Sans';
-  src: url('../fonts/dm-sans-v17-latin-500.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
+.badges-link {
+  display: block;
+  padding: 8px 16px;
+  border: 1px solid;
+  border-radius: 8px;
+  transition: 200ms ease-in;
 }
-
-@font-face {
-  font-family: 'DM Sans';
-  src: url('../fonts/dm-sans-v17-latin-700.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
+.badges-link:hover,
+.badges-link:focus {
+  transform: scale(1.06);
+  color: #747bff;
 }

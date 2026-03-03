@@ -1,41 +1,50 @@
-<header class="header">
-  <div class="container header-row">
-    <a class="nav-logo" href="./index.html" aria-label="Your Energy">
-      <img src="./img/logo.svg" alt="Your Energy" class="logo-img" width="132" height="24" />
-    </a>
+name: Build and deploy to GitHub Pages
 
-    <nav class="nav-pill" aria-label="Main navigation">
-      <a class="nav-link" href="./index.html">Home</a>
-      <a class="nav-link" href="./page-2.html">Favorites</a>
-    </nav>
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-    <ul class="social social--header">
-      <li><a href="https://www.facebook.com/goITclub/" target="_blank" rel="noopener noreferrer" aria-label="GoIT on Facebook"><img src="./img/facebook.svg" alt="" /></a></li>
-      <li><a href="https://www.instagram.com/goitclub/" target="_blank" rel="noopener noreferrer" aria-label="GoIT on Instagram"><img src="./img/instagram.svg" alt="" /></a></li>
-      <li><a href="https://www.youtube.com/c/GoIT" target="_blank" rel="noopener noreferrer" aria-label="GoIT on YouTube"><img src="./img/youtube.svg" alt="" /></a></li>
-    </ul>
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
-    <button class="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
-      <img src="./img/burger.svg" alt="" aria-hidden="true">
-    </button>
-  </div>
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  <div class="menu-backdrop" id="menuBackdrop" hidden></div>
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
 
-  <aside class="menu-mobile" id="mobileMenu" aria-hidden="true">
-    <button class="menu-close" type="button" aria-label="Close menu">
-      <img src="./img/cross.svg" alt="" aria-hidden="true">
-    </button>
+      - name: Install dependencies
+        run: npm ci
 
-    <nav class="menu-links" aria-label="Mobile navigation">
-      <a class="menu-link" href="./index.html">Home</a>
-      <a class="menu-link" href="./page-2.html">Favorites</a>
-    </nav>
+      - name: Build
+        run: npm run build
 
-    <ul class="social social--menu">
-      <li><a href="https://www.facebook.com/goITclub/" target="_blank" rel="noopener noreferrer" aria-label="GoIT on Facebook"><img src="./img/facebook_f.svg" alt="" /></a></li>
-      <li><a href="https://www.instagram.com/goitclub/" target="_blank" rel="noopener noreferrer" aria-label="GoIT on Instagram"><img src="./img/instagram_f.svg" alt="" /></a></li>
-      <li><a href="https://www.youtube.com/c/GoIT" target="_blank" rel="noopener noreferrer" aria-label="GoIT on YouTube"><img src="./img/youtube_f.svg" alt="" /></a></li>
-    </ul>
-  </aside>
-</header>
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
