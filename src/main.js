@@ -276,7 +276,17 @@ async function initQuote(leftRoot) {
         <p class="author" id="quoteAuthor"></p>
       </section>
 
-      <div class="left-photo" aria-hidden="true"></div>
+      <div class="left-photo" aria-hidden="true">
+        <img
+          class="left-photo-img"
+          src="./img/webp/image.webp"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          fetchpriority="high"
+          decoding="async"
+        />
+      </div>
 
       <section class="card card--light">
         <div class="card-head card-head--light">
@@ -1016,7 +1026,17 @@ function renderFavoritesInfo() {
         <p class="author" id="quoteAuthor"></p>
       </section>
 
-      <div class="left-photo-fav" aria-hidden="true"></div>
+      <div class="left-photo-fav" aria-hidden="true">
+        <img
+          class="left-photo-fav-img"
+          src="./img/webp/image.webp"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          fetchpriority="high"
+          decoding="async"
+        />
+      </div>
 
       <section class="card card--light-fav">
         <div class="card-head">
