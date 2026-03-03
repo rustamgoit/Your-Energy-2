@@ -1212,8 +1212,9 @@
 }
 
 
-@media (max-width: 768px) {
+@media (max-width: 520px) {
     .hero-title {    font-size: 44px;    line-height: 44px;  }
+    .hero::before { height: 38px;}
 }
 
 @media (max-width: 680px) {
