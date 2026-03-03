@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --base=/Your-Energy/",
+    "build": "vite build --base=/Your-Energy-2/",
     "preview": "vite preview"
   },
   "author": "Rustam Maistroenko",
